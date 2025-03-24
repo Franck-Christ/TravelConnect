@@ -57,7 +57,7 @@ const Testimonials: React.FC = () => {
       author: "Esther Mbah",
       role: "Teacher",
       rating: 5,
-      avatarUrl: "public/model.jpg"
+      avatarUrl: "/model.jpg"
     }
   ];
 
