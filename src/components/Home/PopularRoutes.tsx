@@ -44,21 +44,21 @@ const PopularRoutes: React.FC = () => {
       to: 'Yaoundé',
       price: '5,000 FCFA',
       //imageUrl: 'https://images.unsplash.com/photo-1588974728772-4c153dcd1c76?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80'
-      imageUrl:'public/doul.jpg'
+      imageUrl:'/doul.jpg'
     },
     {
       from: 'Bamenda',
       to: 'Bafoussam',
       price: '4,500 FCFA',
       //imageUrl: 'https://images.unsplash.com/photo-1513125370-3460ebe3401b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80'
-      imageUrl: 'public/trav.jpg'
+      imageUrl: '/trav.jpg'
     },
     {
       from: 'Yaoundé',
       to: 'Douala',
       price: '5,000 FCFA',
       //imageUrl: 'https://images.unsplash.com/photo-1517400508447-f8dd518b86db?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80'
-      imageUrl: 'public/yaounde.jpg'
+      imageUrl: '/yaounde.jpg'
     },
     {
       from: 'Buea',
