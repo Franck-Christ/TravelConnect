@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bus, Menu, User, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
+import { useAdminAuth } from '../../context/AdminAuthContext';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -36,7 +36,7 @@ const Navbar: React.FC = () => {
             <Link to="/search" className="px-3 py-2 rounded-md hover:bg-blue-700">Search</Link>
             <Link to="/my-trips" className="px-3 py-2 rounded-md hover:bg-blue-700">My Trips</Link>
             <Link to="/support" className="px-3 py-2 rounded-md hover:bg-blue-700">Support</Link>
-            
+            <Link to="/admin" className="px-3 py-2 rounded-md hover:bg-blue-700">Admin</Link>
             {user ? (
               <div className="relative group">
                 <button className="flex items-center px-3 py-2 rounded-md hover:bg-blue-800">
@@ -90,6 +90,13 @@ const Navbar: React.FC = () => {
               onClick={() => setIsMenuOpen(false)}
             >
               Search
+            </Link>
+            <Link 
+              to="/admin" 
+              className="block px-3 py-2 rounded-md hover:bg-blue-700"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Admin
             </Link>
             <Link 
               to="/my-trips" 

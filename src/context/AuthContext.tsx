@@ -2,11 +2,12 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (credentials: { identifier: string; password: string }) => Promise<{ error: any }>;
-  signUp: (credentials: { email: string; phone: string; password: string; username: string }) => Promise<{ error: any }>;
+  signUp: (credentials: { fullname: string; email: string; phone: string; password: string; username: string }) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<{ error: any }>;
 }
@@ -70,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check if identifier is an email
     const isEmail = identifier.includes('@');
     
-    let { data, error } = await supabase.auth.signInWithPassword({
+    let { data:_data, error } = await supabase.auth.signInWithPassword({
       email: isEmail ? identifier : '',
       phone: !isEmail ? identifier : '',
       password,
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (userData?.email) {
-        ({ data, error } = await supabase.auth.signInWithPassword({
+        ({ data:_data, error } = await supabase.auth.signInWithPassword({
           email: userData.email,
           password,
         }));
