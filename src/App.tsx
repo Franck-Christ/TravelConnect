@@ -16,19 +16,15 @@ import SupportPage from "./pages/SupportPage";
 // Admin Pages
 import AdminAuthPage from "./pages/admin/AdminAuthPage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
+// import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminTripsPage from "./pages/admin/AdminTripsPage";
 import AdminBookingsPage from "./pages/admin/AdminBookingsPage";
 import AdminSupportPage from "./pages/admin/AdminSupportPage";
 import { NotFoundPage } from "./components/admin/NotFoundPage";
 import ProtectedAdminRoute from "./components/admin/ProtectedAdminRoute";
 import UserManagement from './pages/admin/UserManagement';
-import AdminPaymentsPage from './pages/admin/AdminPaymentsPage';
-import AdminPromotionsPage from './pages/admin/AdminPromotionsPage';
-import AdminNotificationsPage from './pages/admin/AdminNotificationsPage';
-import AdminReportsPage from './pages/admin/AdminReportsPage';
-import AdminAgenciesPage from './pages/admin/AdminAgenciesPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminbusesPage from './pages/admin/AdminbusesPage';
+import AdminRoutespage from'./pages/admin/AdminRoutesPage';
 
 function App() {
   return (
@@ -44,24 +40,26 @@ function App() {
           <Route path="/my-trips" element={<MyTripsPage />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/admin" element={<AdminAuthPage />} />
-          
-
-          {/* Admin Routes */}
-          <Route path="/admin/login" element={<AdminAuthPage />} />
-          <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
-          <Route path="/admin-users" element={<AdminUsersPage />} />
-          <Route path="/admin/users" element={<UserManagement />} />
-          <Route path="/admin-bookings" element={<AdminBookingsPage />} />
-          <Route path="/admin-payments" element={<AdminPaymentsPage />} />
+         {/* <Route path="/admin-payments" element={<AdminPaymentsPage />} />
           <Route path="/admin-promotions" element={<AdminPromotionsPage />} />
           <Route path="/admin-notifications" element={<AdminNotificationsPage />} />
           <Route path="/admin-reports" element={<AdminReportsPage />} />
           <Route path="/admin-agencies" element={<AdminAgenciesPage />} />
-          <Route path="/admin-settings" element={<AdminSettingsPage />} />
+          <Route path="/admin-settings" element={<AdminSettingsPage />} />   */}
+          <Route path="/admin-users" element={<UserManagement />} />
+
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminAuthPage />} />
+          <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
+          {/* <Route path="/admin-users" element={<AdminUsersPage />} /> */}
+          <Route path="/admin-users" element={<UserManagement />} />
+          <Route path="/admin-bookings" element={<AdminBookingsPage />} />
+          <Route path="/admin-buses" element={<AdminbusesPage />} />
+          <Route path="/admin-routes" element={<AdminRoutespage/>} />
           {/* Protected Admin Routes */}
           <Route element={<ProtectedAdminRoute />}>
             <Route path="/admin" element={<AdminDashboardPage />} />
-            <Route path="/admin/users" element={<AdminUsersPage />} />
+            {/* <Route path="/admin/users" element={<AdminUsersPage />} /> */}
             <Route path="/admin/trips" element={<AdminTripsPage />} />
             <Route path="/admin/bookings" element={<AdminBookingsPage />} />
             <Route path="/admin/support" element={<AdminSupportPage />} />

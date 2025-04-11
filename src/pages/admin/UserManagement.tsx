@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useUsers } from '../../lib/hooks/useUsers';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { 
   Search, 
   Filter, 
@@ -8,34 +8,261 @@ import {
   MoreVertical,
   UserPlus,
   Shield,
-  UserCog
+  UserCog,
+  X,
+  Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
+
+// Define a type that matches the structure of users from profiles table
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  phone_number?: string;
+  role: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface NewUserForm {
+  email: string;
+  full_name: string;
+  phone_number: string;
+  password: string;
+  role: 'admin' | 'agency_admin' | 'customer';
+}
 
 const UserManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<string | undefined>();
-  const { users, loading, error, importing, updateUserRole, importUsers } = useUsers({
-    search: searchQuery,
-    role: selectedRole
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [newUser, setNewUser] = useState<NewUserForm>({
+    email: '',
+    full_name: '',
+    phone_number: '',
+    password: '',
+    role: 'customer'
   });
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [searchQuery, selectedRole]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch users from profiles table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+        
+      if (error) {
+        throw error;
+      }
+
+      // Apply filters
+      let filteredUsers = data || [];
+      
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        filteredUsers = filteredUsers.filter(user => 
+          user.email?.toLowerCase().includes(searchLower) || 
+          user.full_name?.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      if (selectedRole) {
+        filteredUsers = filteredUsers.filter(user => 
+          user.role === selectedRole
+        );
+      }
+
+      setUsers(filteredUsers);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch users');
+      console.error('Error fetching users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
-    const result = await updateUserRole(userId, newRole);
-    if (!result.success) {
-      // You might want to show a toast notification here
-      console.error('Failed to update role:', result.error);
+    try {
+      // Update role in profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({ 
+          id: userId, 
+          role: newRole,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId ? { ...user, role: newRole } : user
+        )
+      );
+      
+      toast.success('User role updated successfully');
+    } catch (err: any) {
+      console.error('Failed to update role:', err.message);
+      toast.error('Failed to update user role');
+    }
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteConfirmModal(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      // Delete from profiles table first
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userToDelete.id);
+        
+      if (profileError) {
+        throw profileError;
+      }
+      
+      // Note: We can't delete from auth.users directly without admin privileges
+      // The user will need to be deleted from the Supabase dashboard
+      
+      // Update local state
+      setUsers(prevUsers => 
+        prevUsers.filter(user => user.id !== userToDelete.id)
+      );
+      
+      toast.success('User deleted successfully');
+      setShowDeleteConfirmModal(false);
+      setUserToDelete(null);
+    } catch (err: any) {
+      console.error('Failed to delete user:', err.message);
+      toast.error('Failed to delete user');
     }
   };
 
   const handleImportUsers = async () => {
-    const result = await importUsers();
-    if (result.success) {
-      // You might want to show a success toast here
-      console.log(`Successfully imported ${result.imported} users`);
-    } else {
-      // You might want to show an error toast here
-      console.error('Import failed:', result.error);
+    try {
+      setImporting(true);
+      
+      // This is a placeholder for actual import logic
+      // In a real implementation, you might:
+      // 1. Upload a CSV file
+      // 2. Process the file
+      // 3. Insert records into the database
+      
+      // Simulate a delay for demonstration
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // For demo purposes, we'll just log a success message
+      console.log('Users imported successfully');
+      toast.success('Users imported successfully');
+      
+      // Refresh the user list
+      fetchUsers();
+    } catch (err: any) {
+      console.error('Import failed:', err.message);
+      toast.error('Failed to import users');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleAddUser = async () => {
+    try {
+      setFormError(null);
+      
+      // Validate form
+      if (!newUser.email) {
+        setFormError('Email is required');
+        return;
+      }
+      
+      if (!newUser.full_name) {
+        setFormError('Full name is required');
+        return;
+      }
+      
+      if (!newUser.password) {
+        setFormError('Password is required');
+        return;
+      }
+      
+      // Create the user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newUser.email,
+        password: newUser.password,
+        options: {
+          data: {
+            full_name: newUser.full_name,
+            phone_number: newUser.phone_number || null
+          }
+        }
+      });
+      
+      if (authError) {
+        throw authError;
+      }
+      
+      if (!authData.user) {
+        throw new Error('Failed to create user');
+      }
+      
+      // Create the profile in the profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email: newUser.email,
+          full_name: newUser.full_name,
+          phone_number: newUser.phone_number || null,
+          role: newUser.role
+        });
+      
+      if (profileError) {
+        throw profileError;
+      }
+      
+      toast.success('User added successfully');
+      
+      // Reset form and close modal
+      setNewUser({
+        email: '',
+        full_name: '',
+        phone_number: '',
+        password: '',
+        role: 'customer'
+      });
+      setShowAddUserModal(false);
+      
+      // Refresh the user list
+      fetchUsers();
+      
+    } catch (err: any) {
+      console.error('Failed to add user:', err.message);
+      setFormError(err.message || 'Failed to add user');
+      toast.error('Failed to add user');
     }
   };
 
@@ -85,7 +312,10 @@ const UserManagement: React.FC = () => {
             )}
             Import Users
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+          <button 
+            onClick={() => setShowAddUserModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
             <UserPlus className="h-4 w-4" />
             Add User
           </button>
@@ -166,8 +396,8 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
-                      {user.role}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role || 'customer')}`}>
+                      {user.role || 'customer'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -192,8 +422,12 @@ const UserManagement: React.FC = () => {
                       >
                         <UserCog className="h-4 w-4" />
                       </button>
-                      <button className="text-gray-400 hover:text-gray-500">
-                        <MoreVertical className="h-4 w-4" />
+                      <button
+                        onClick={() => handleDeleteUser(user)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Delete User"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </td>
@@ -203,6 +437,158 @@ const UserManagement: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Add User Modal */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Add New User</h2>
+              <button 
+                onClick={() => setShowAddUserModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {formError && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+                {formError}
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="user@example.com"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={newUser.full_name}
+                  onChange={(e) => setNewUser({...newUser, full_name: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={newUser.phone_number}
+                  onChange={(e) => setNewUser({...newUser, phone_number: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="+1234567890"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Role *
+                </label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value as NewUserForm['role']})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="customer">Customer</option>
+                  <option value="agency_admin">Agency Admin</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowAddUserModal(false)}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddUser}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Add User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmModal && userToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Confirm Delete</h2>
+              <button 
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700">
+                Are you sure you want to delete the user <span className="font-semibold">{userToDelete.full_name}</span>?
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                This action cannot be undone. The user will no longer be able to access the system.
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteUser}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -21,13 +21,13 @@ const navItems = [
   { icon: Bus, label: 'Bus Management', path: '/admin-buses' },
   { icon: Map, label: 'Route Management', path: '/admin-routes' },
   { icon: BookOpen, label: 'Bookings', path: '/admin-bookings' },
-  { icon: CreditCard, label: 'Payments', path: '/admin-payments' },
-  { icon: Tag, label: 'Promotions', path: '/admin-promotions' },
-  { icon: Bell, label: 'Notifications', path: '/admin-notifications' },
-  { icon: MessageSquare, label: 'Support', path: '/admin-support' },
-  { icon: BarChart3, label: 'Reports', path: '/admin-reports' },
-  { icon: Building2, label: 'Agencies', path: '/admin-agencies' },
-  { icon: Settings, label: 'Settings', path: '/admin-settings' },
+
+
+  // { icon: CreditCard, label: 'Payments', path: '/admin-payments' },
+  // { icon: Tag, label: 'Promotions', path: '/admin-promotions' },
+  // { icon: Bell, label: 'Notifications', path: '/admin-notifications' },
+  // { icon: MessageSquare, label: 'Support', path: '/admin-support' },
+  // { icon: Settings, label: 'Settings', path: '/admin-settings' },
 ];
 
 export default function AdminSidebar() {

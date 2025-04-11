@@ -36,31 +36,61 @@ const AuthPage: React.FC = () => {
         toast.error(error.message);
       } else {
         toast.success('Successfully logged in!');
-        navigate('/');
+        // Clear form fields
+        setLoginIdentifier('');
+        setLoginPassword('');
+        // Navigate to home page
+        navigate('/', { replace: true });
       }
-    } catch (error) {
-      toast.error('Failed to login. Please try again.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to login. Please try again.');
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate required fields
+    if (!email && !phone) {
+      toast.error('Please provide either an email or phone number');
+      return;
+    }
+
+    if (!password || !confirmPassword) {
+      toast.error('Please provide a password');
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
     }
 
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (!username) {
+      toast.error('Please provide a username');
+      return;
+    }
+
+    if (!fullname) {
+      toast.error('Please provide your full name');
+      return;
+    }
+
     // Format phone number to international format if needed
     let formattedPhone = phone;
-    if (!phone.startsWith('+')) {
+    if (phone && !phone.startsWith('+')) {
       formattedPhone = `+237${phone.replace(/^0+/, '')}`;
     }
     
     try {
       const { error } = await signUp({
-        email,
-        phone: formattedPhone,
+        email: email || '',
+        phone: formattedPhone || '',
         password,
         username,
         fullname
@@ -69,11 +99,11 @@ const AuthPage: React.FC = () => {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success('Registration successful! Please check your email for verification.');
+        toast.success('Registration successful! Please check your email/phone for verification.');
         setIsLogin(true);
       }
-    } catch (error) {
-      toast.error('Failed to register. Please try again.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to register. Please try again.');
     }
   };
 
@@ -309,4 +339,4 @@ const AuthPage: React.FC = () => {
   );
 };
 
-export default AuthPage;``
+export default AuthPage;

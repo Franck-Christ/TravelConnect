@@ -130,45 +130,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, phoneNumber?: string) => {
+  const signUp = async ({ 
+    email, 
+    phone, 
+    password, 
+    username, 
+    fullname 
+  }: { 
+    email?: string; 
+    phone?: string; 
+    password: string; 
+    username: string; 
+    fullname: string; 
+  }) => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Create auth user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password
+      // Sign up with email or phone
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email || undefined,
+        phone: phone || undefined,
+        password,
       });
-      
-      if (error) {
-        throw error;
+
+      if (authError) throw authError;
+
+      if (!authData.user) {
+        throw new Error('No user data returned after signup');
       }
-      
-      if (data.user) {
-        // Create profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email,
-            full_name: fullName,
-            phone_number: phoneNumber,
-            role: 'customer' // Default role
-          });
-          
-        if (profileError) {
-          throw profileError;
-        }
-      }
-      
-      return { success: true };
-    } catch (err: any) {
-      console.error('Error signing up:', err);
-      setError(err.message);
-      return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
+
+      // Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: authData.user.id,
+            username,
+            full_name: fullname,
+            email: email || null,
+            phone: phone || null,
+            role: 'user',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ]);
+
+      if (profileError) throw profileError;
+
+      return { data: authData, error: null };
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      return { data: null, error };
     }
   };
 

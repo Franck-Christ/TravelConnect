@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check if identifier is an email
     const isEmail = identifier.includes('@');
     
-    let { data:_data, error } = await supabase.auth.signInWithPassword({
+    let { data, error } = await supabase.auth.signInWithPassword({
       email: isEmail ? identifier : '',
       phone: !isEmail ? identifier : '',
       password,
@@ -86,29 +86,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (userData?.email) {
-        ({ data:_data, error } = await supabase.auth.signInWithPassword({
+        ({ data, error } = await supabase.auth.signInWithPassword({
           email: userData.email,
           password,
         }));
       }
     }
 
+    if (!error && data?.user) {
+      // Fetch user profile after successful sign-in
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      setUser(profileData as User || {
+        id: data.user.id,
+        email: data.user.email,
+        phone: data.user.phone,
+      });
+    }
+
     return { error };
   };
 
-  const signUp = async ({ email, phone, password, username }: { 
+  const signUp = async ({ email, phone, password, username, fullname }: { 
     email: string;
     phone: string;
     password: string;
     username: string;
+    fullname: string;
   }) => {
+    // Format phone number to E.164 format if provided
+    let formattedPhone = phone;
+    if (phone && !phone.startsWith('+')) {
+      formattedPhone = `+237${phone.replace(/^0+/, '')}`;
+    }
+
+    // Determine if we're using email or phone for signup
+    const signUpData = email 
+      ? { email, password }
+      : { phone: formattedPhone, password };
+
     const { data, error } = await supabase.auth.signUp({
-      email,
-      phone,
-      password,
+      ...signUpData,
       options: {
         data: {
           username,
+          fullname,
         },
       },
     });
@@ -120,9 +146,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .insert([
           {
             id: data.user.id,
-            email,
-            phone,
+            email: email || null,
+            phone: formattedPhone || null,
             username,
+            full_name: fullname,
           },
         ]);
 

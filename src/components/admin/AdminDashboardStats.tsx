@@ -6,10 +6,10 @@ import { supabase } from '../../lib/supabase';
 
 // Sample data for the chart
 const chartData = [
-  { name: 'Jan', bookings: 0 },
-  { name: 'Feb', bookings:0 },
-  { name: 'Mar', bookings: 0 },
-  { name: 'Apr', bookings: 0 },
+  { name: 'Jan', bookings: 2 },
+  { name: 'Feb', bookings:4 },
+  { name: 'Mar', bookings: 8 },
+  { name: 'Apr', bookings: 3 },
   { name: 'May', bookings: 0 },
   { name: 'Jun', bookings: 0 }
 ];
@@ -53,7 +53,7 @@ export default function AdminDashboardStats() {
     activeBuses: 0,
     revenue: 0
   });
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [popularRoutes, setPopularRoutes] = useState<Route[]>([]);
@@ -73,7 +73,7 @@ export default function AdminDashboardStats() {
         
         // Fetch users count
         const { count: usersCount, error: usersError } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*', { count: 'exact', head: true });
           
         if (usersError) throw usersError;
@@ -88,16 +88,16 @@ export default function AdminDashboardStats() {
         // Fetch revenue (sum of all booking amounts)
         const { data: revenueData, error: revenueError } = await supabase
           .from('bookings')
-          .select('amount');
+          .select('total_amount');
           
         if (revenueError) throw revenueError;
         
-        const totalRevenue = revenueData?.reduce((sum, booking) => sum + (booking.amount || 0), 0) || 0;
+        const totalRevenue = revenueData?.reduce((sum, booking) => sum + (booking.total_amount || 0), 0) || 0;
         
         // Fetch recent bookings
         const { data: recentBookingsData, error: recentBookingsError } = await supabase
           .from('bookings')
-          .select('*, users(name), trips(destination)')
+          .select('*, profiles(full_name), trips(destination)')
           .order('created_at', { ascending: false })
           .limit(5);
           
@@ -105,7 +105,7 @@ export default function AdminDashboardStats() {
         
         // Fetch popular routes
         const { data: popularRoutesData, error: popularRoutesError } = await supabase
-          .from('trips')
+          .from('routes')
           .select('destination, count')
           .order('count', { ascending: false })
           .limit(5);
@@ -129,10 +129,10 @@ export default function AdminDashboardStats() {
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
-  
+
   // Animate the stats with auto-increment
   useEffect(() => {
     if (isLoading) return;
@@ -247,7 +247,7 @@ export default function AdminDashboardStats() {
             {popularRoutes.length > 0 ? (
               popularRoutes.map((route, index) => (
                 <div key={index} className="flex justify-between items-center p-3 border-b">
-                  <div>
+          <div>
                     <p className="font-medium">{route.destination}</p>
                   </div>
                   <div className="text-right">
