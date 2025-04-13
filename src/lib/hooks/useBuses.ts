@@ -100,15 +100,25 @@ export function useBuses(filters: BusFilters = {}) {
 
   const addBus = async (bus: Omit<Bus, 'id' | 'created_at'>) => {
     try {
+      // Ensure the data structure matches the database schema
+      const busData = {
+        name: bus.name,
+        type: bus.type,
+        capacity: bus.capacity,
+        amenities: bus.amenities || {},
+        status: bus.status,
+        agency_id: bus.agency_id
+      };
+
       const { data, error } = await supabase
         .from('buses')
-        .insert([bus])
-        .select()
+        .insert([busData])
+        .select('*')
         .single();
 
       if (error) throw error;
 
-      // Transform the data to match the expected format with predefined agencies
+      // Transform the data to match the expected format
       const agency = AGENCIES.find(a => a.id === data.agency_id);
       const newBus = {
         ...data,
@@ -121,6 +131,7 @@ export function useBuses(filters: BusFilters = {}) {
       toast.success('Bus added successfully');
       return { success: true, data: newBus };
     } catch (err) {
+      console.error('Error adding bus:', err);
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while adding bus';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };

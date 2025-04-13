@@ -16,33 +16,30 @@ const AMENITIES = [
   'Luggage Space'
 ];
 
-// Predefined list of agencies
-const AGENCIES = [
-  { id: '1', name: 'Finex' },
-  { id: '2', name: 'Mogamo' },
-  { id: '3', name: 'Musango' },
-  { id: '4', name: 'General' }
-];
+// Import AGENCIES from a shared constants file instead of redefining
+import { AGENCIES } from '../../constants/agencies';
 
 interface Agency {
   id: string;
   name: string;
 }
 
+const INITIAL_BUS_STATE: Partial<BusType> = {
+  name: '',
+  type: '',
+  capacity: 0,
+  amenities: {},
+  status: 'active',
+  agency_id: ''
+};
+
 export default function Buses() {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [busToDelete, setBusToDelete] = useState<BusType | null>(null);
-  const [agencies, setAgencies] = useState<Agency[]>(AGENCIES);
-  const [newBus, setNewBus] = useState<Partial<BusType>>({
-    name: '',
-    type: '',
-    capacity: 0,
-    amenities: {},
-    status: 'active',
-    agency_id: ''
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newBus, setNewBus] = useState<Partial<BusType>>(INITIAL_BUS_STATE);
   
   const { 
     buses, 
@@ -54,30 +51,66 @@ export default function Buses() {
     refreshBuses 
   } = useBuses({ search });
 
+  const resetForm = () => {
+    setNewBus(INITIAL_BUS_STATE);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    resetForm();
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setBusToDelete(null);
+  };
+
   const handleAddBus = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required fields
-    if (!newBus.name || !newBus.type || !newBus.agency_id || !newBus.capacity) {
-      toast.error('Please fill in all required fields');
+    // Enhanced validation
+    if (!newBus.name?.trim()) {
+      toast.error('Please enter a valid bus name');
       return;
     }
     
-    const result = await addBus(newBus as Omit<BusType, 'id' | 'created_at'>);
-    if (result.success) {
-      setShowAddModal(false);
-      setNewBus({
-        name: '',
-        type: '',
-        capacity: 0,
-        amenities: {},
-        status: 'active',
-        agency_id: ''
-      });
+    if (!newBus.type) {
+      toast.error('Please select a bus type');
+      return;
+    }
+    
+    if (!newBus.agency_id) {
+      toast.error('Please select an agency');
+      return;
+    }
+    
+    if (!newBus.capacity || newBus.capacity < 1) {
+      toast.error('Please enter a valid capacity (minimum 1)');
+      return;
+    }
+
+    // Ensure amenities is an object
+    const busData = {
+      ...newBus,
+      amenities: newBus.amenities || {},
+    };
+    
+    try {
+      setIsSubmitting(true);
+      const result = await addBus(busData as Omit<BusType, 'id' | 'created_at'>);
+      if (result.success) {
+        handleCloseAddModal();
+        toast.success('Bus added successfully');
+      }
+    } catch (err) {
+      console.error('Error adding bus:', err);
+      toast.error('Failed to add bus. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleDeleteBus = async (bus: BusType) => {
+  const handleDeleteBus = (bus: BusType) => {
     setBusToDelete(bus);
     setShowDeleteModal(true);
   };
@@ -85,22 +118,42 @@ export default function Buses() {
   const confirmDeleteBus = async () => {
     if (!busToDelete) return;
     
-    const result = await deleteBus(busToDelete.id);
-    if (result.success) {
-      setShowDeleteModal(false);
-      setBusToDelete(null);
+    try {
+      setIsSubmitting(true);
+      const result = await deleteBus(busToDelete.id);
+      if (result.success) {
+        handleCloseDeleteModal();
+        toast.success('Bus deleted successfully');
+      }
+    } catch (err) {
+      console.error('Detailed error:', {
+        error: err,
+        requestData: busToDelete,
+        timestamp: new Date().toISOString()
+      });
+      toast.error('Failed to delete bus. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleStatusChange = async (busId: string, status: BusType['status']) => {
-    const result = await updateBusStatus(busId, status);
-    if (!result.success) {
-      toast.error('Failed to update bus status');
+    try {
+      const result = await updateBusStatus(busId, status);
+      if (!result.success) {
+        toast.error('Failed to update bus status');
+      }
+    } catch (err) {
+      console.error('Detailed error:', {
+        error: err,
+        requestData: { busId, status },
+        timestamp: new Date().toISOString()
+      });
+      toast.error('Failed to update status. Please try again.');
     }
   };
-
   return (
-    <div className="p-6">
+    <div className="container" role="main">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Bus Management</h1>
         <div className="flex gap-4">
@@ -213,13 +266,19 @@ export default function Buses() {
       </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Add New Bus</h2>
+              <h2 id="modal-title" className="text-xl font-bold">Add New Bus</h2>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={handleCloseAddModal}
                 className="text-gray-400 hover:text-gray-500"
+                aria-label="Close modal"
               >
                 ×
               </button>
@@ -265,7 +324,7 @@ export default function Buses() {
                     required
                   >
                     <option value="">Select agency</option>
-                    {agencies.map(agency => (
+                    {AGENCIES.map(agency => (
                       <option key={agency.id} value={agency.id}>
                         {agency.name}
                       </option>
@@ -328,16 +387,18 @@ export default function Buses() {
               <div className="mt-6 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={handleCloseAddModal}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  disabled={isSubmitting}
                 >
-                  Add Bus
+                  {isSubmitting ? 'Adding...' : 'Add Bus'}
                 </button>
               </div>
             </form>
@@ -346,16 +407,19 @@ export default function Buses() {
       )}
 
       {showDeleteModal && busToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-modal-title"
+        >
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Delete Bus</h2>
+              <h2 id="delete-modal-title" className="text-xl font-bold">Delete Bus</h2>
               <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setBusToDelete(null);
-                }}
+                onClick={handleCloseDeleteModal}
                 className="text-gray-400 hover:text-gray-500"
+                aria-label="Close modal"
               >
                 ×
               </button>
@@ -365,19 +429,18 @@ export default function Buses() {
             </p>
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setBusToDelete(null);
-                }}
+                onClick={handleCloseDeleteModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDeleteBus}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                disabled={isSubmitting}
               >
-                Delete Bus
+                {isSubmitting ? 'Deleting...' : 'Delete Bus'}
               </button>
             </div>
           </div>

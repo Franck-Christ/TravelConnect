@@ -76,5 +76,24 @@ export function useRoutes(search?: string) {
     }
   };
 
-  return { routes, loading, error, addRoute, updateRoute };
+  const deleteRoute = async (routeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('routes')
+        .delete()
+        .eq('id', routeId);
+
+      if (error) throw error;
+
+      setRoutes(routes.filter(route => route.id !== routeId));
+      return { success: true };
+    } catch (err) {
+      return { 
+        success: false, 
+        error: err instanceof Error ? err.message : 'An error occurred' 
+      };
+    }
+  };
+
+  return { routes, loading, error, addRoute, updateRoute, deleteRoute };
 }

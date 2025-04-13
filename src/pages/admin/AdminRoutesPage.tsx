@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Search, Plus, MapPin } from 'lucide-react';
+import { Search, Plus, MapPin, Trash2 } from 'lucide-react';
 import { useRoutes } from '../../lib/hooks/useRoutes';
 import type { Route } from '../../types/database';
+import toast from 'react-hot-toast';
 
 export default function Routes() {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [routeToDelete, setRouteToDelete] = useState<Route | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newRoute, setNewRoute] = useState<Partial<Route>>({
     start_point: '',
     destination: '',
@@ -14,7 +18,7 @@ export default function Routes() {
     base_fare: 0
   });
   
-  const { routes, loading, error, addRoute, updateRoute } = useRoutes(search);
+  const { routes, loading, error, addRoute, deleteRoute } = useRoutes(search);
 
   const handleAddRoute = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +34,35 @@ export default function Routes() {
       });
     } else {
       alert('Failed to add route: ' + result.error);
+    }
+  };
+
+  const handleDeleteClick = (route: Route) => {
+    setRouteToDelete(route);
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setRouteToDelete(null);
+    setShowDeleteModal(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!routeToDelete) return;
+    
+    try {
+      setIsSubmitting(true);
+      const result = await deleteRoute(routeToDelete.id);
+      if (result.success) {
+        toast.success('Route deleted successfully');
+        handleCloseDeleteModal();
+      } else {
+        toast.error(result.error || 'Failed to delete route');
+      }
+    } catch (err) {
+      toast.error('An error occurred while deleting the route');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -74,6 +107,7 @@ export default function Routes() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base Fare</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -108,10 +142,19 @@ export default function Routes() {
                       {route.duration}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ${route.base_fare}
+                      {route.base_fare.toLocaleString()} FCFA
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(route.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => handleDeleteClick(route)}
+                        className="text-red-500 hover:text-red-700 focus:outline-none"
+                        title="Delete Route"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -168,7 +211,7 @@ export default function Routes() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Base Fare ($)</label>
+                  <label className="block text-sm font-medium text-gray-700">Base Fare (FCFA)</label>
                   <input
                     type="number"
                     value={newRoute.base_fare}
@@ -194,6 +237,33 @@ export default function Routes() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && routeToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Delete Route</h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete the route from "{routeToDelete.start_point}" to "{routeToDelete.destination}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCloseDeleteModal}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Deleting...' : 'Delete Route'}
+              </button>
+            </div>
           </div>
         </div>
       )}
